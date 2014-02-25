@@ -4,19 +4,9 @@ import codecs
 import re
 import json
 import sqlite3
+from mill_obj import fix, fix2
 
 DEBUG = False
-
-def fix(raw):
-    rec = re.compile(u"（.*?）", re.DOTALL)
-    half = rec.sub("", raw)
-    rec = re.compile(r"&#[0-9]{1,10};")
-    rst = rec.findall(half)
-    if len(rst):
-        for each in rst:
-            num = int(each[2:-1])
-            half = half.replace(each, unichr(num))
-    return half
 
 def get_inner(line):
     rec = re.compile(r"'.*?'", re.DOTALL)
@@ -27,25 +17,33 @@ def get_inner(line):
     else:
         return x[1:-1]
 
-def create_object(d, a, s, p):
-    rst = {}
-    rst["dynasty"] = d
-    rst["author"] = a
-    rst["subject"] = s
-    rst["poem"] = p
+def db_start():
+    
+    conn = sqlite3.connect('_poems.db')
+    cur = conn.cursor()
+    cur.execute('''CREATE TABLE IF NOT EXISTS poems 
+                   (id integer primary key autoincrement, dynasty text, author text, subject text, poem text)''')
+    return (conn, cur)
 
-    return rst
+def db_close(conn):
+    conn.commit()
+    conn.close()
+
+def db_write(cur, d, a, s, p):
+    cur.execute('INSERT INTO poems (dynasty, author, subject, poem) VALUES(?,?,?,?)', [d, a, s, p])
 
 def main(f):
 
-    tf = codecs.open("_poets_obj_test.txt", "w", "utf-8")
+    conn, cur = db_start()
+
     dynasty = ""
     author = ""
     subject = ""
     poem = ""
     cnt = 0
 
-    for line in f:
+    for rline in f:
+        line = fix(rline)
         if line.find(u"<Dynasties>") >= 0:
             pass
         elif line.find(u"<Dynasty name") >= 0:
@@ -57,18 +55,13 @@ def main(f):
         elif line.find(u"<Poems>") >= 0:
             pass
         elif line.find(u"<Poem subject") >= 0:
-            cnt += 1
             subject = get_inner(line)
-            print cnt
         elif line.find(u"</Poem>") >= 0:
-            obj = create_object(dynasty, author, subject, poem)
-            if DEBUG:
-                print json.dumps(obj, ensure_ascii = False)
-                tmp = input("ok")
-            else:
-                tf.write(json.dumps(obj, ensure_ascii = False))
-                #db_write(obj)
+            db_write(cur, dynasty, author, subject, poem)
             poem = ""
+            cnt += 1
+            print cnt
+            pass
         elif line.find(u"</Poems>") >= 0:
             pass
         elif line.find(u"</Author>") >= 0:
@@ -80,8 +73,10 @@ def main(f):
         elif line.find(u"</Dynasties>") >= 0:
             pass
         else:
-            poem = poem + fix(line)
+            poem = poem + fix2(rline)
+
+    db_close(conn)
 
 if "__main__" == __name__:
-    f = codecs.open("_poets_test.txt", "r", "utf-8")
+    f = codecs.open("_poets.txt", "r", "utf-8")
     main(f)
