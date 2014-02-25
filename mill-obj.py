@@ -15,8 +15,7 @@ def fix(raw):
     if len(rst):
         for each in rst:
             num = int(each[2:-1])
-            num_str = str(hex(num))[2:]
-            half.replace(each, r"\u" + num_str)
+            half = half.replace(each, unichr(num))
     return half
 
 def get_inner(line):
@@ -39,7 +38,7 @@ def create_object(d, a, s, p):
 
 def main(f):
 
-    tf = codecs.open("poets_obj.txt", "w", "utf-8")
+    tf = codecs.open("_poets_obj_test.txt", "w", "utf-8")
     dynasty = ""
     author = ""
     subject = ""
@@ -84,5 +83,5 @@ def main(f):
             poem = poem + fix(line)
 
 if "__main__" == __name__:
-    f = codecs.open("poets.txt", "r", "utf-8")
+    f = codecs.open("_poets_test.txt", "r", "utf-8")
     main(f)

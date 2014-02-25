@@ -21,6 +21,7 @@ class ZPD():
         return rst[0][0]
 
     def pick(self, max_num = 100):
-
         
-
+        cur = self.conn.cursor()
+        rst = cur.execute("SELECT * FROM poems ORDER BY RANDOM() LIMIT ?", (max_num,))
+        return rst.fetchall()

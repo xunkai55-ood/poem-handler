@@ -15,8 +15,7 @@ def fix(raw):
     if len(rst):
         for each in rst:
             num = int(each[2:-1])
-            num_str = str(hex(num))[2:]
-            half.replace(each, r"\u" + num_str)
+            half.replace(each, unichr(num))
     return half
 
 def get_inner(line):
@@ -30,7 +29,7 @@ def get_inner(line):
 
 def db_start():
     
-    conn = sqlite3.connect('_poem1402.db')
+    conn = sqlite3.connect('_poems.db')
     cur = conn.cursor()
     cur.execute('''CREATE TABLE IF NOT EXISTS poems 
                    (id integer primary key autoincrement, dynasty text, author text, subject text, poem text)''')
