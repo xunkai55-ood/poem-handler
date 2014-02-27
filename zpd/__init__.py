@@ -25,3 +25,13 @@ class ZPD():
         cur = self.conn.cursor()
         rst = cur.execute("SELECT * FROM poems ORDER BY RANDOM() LIMIT ?", (max_num,))
         return rst.fetchall()
+
+    def tuple2dict(self, tup):
+        dic = {}
+        dic["id"] = tup[0]
+        dic["dynasty"] = tup[1]
+        dic["author"] = tup[2]
+        dic["subject"] = tup[3]
+        dic["poem"] = tup[4]
+        return dic
+
