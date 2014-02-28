@@ -20,6 +20,12 @@ class ZPD():
         rst = self.conn.execute("SELECT count(*) FROM poems").fetchall()
         return rst[0][0]
 
+    def select_by_id(self, l, r):
+
+        cur = self.conn.cursor()
+        rst = cur.execute("SELECT * FROM poems WHERE id > ? AND id <= ? ORDER BY id", (l, r))
+        return rst
+
     def pick(self, max_num = 100):
         
         cur = self.conn.cursor()

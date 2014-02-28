@@ -1,10 +1,14 @@
+# -*- encoding: utf-8 -*-
+
 #######################################
 # influence.py
 # This code is aimed to assess each poem an influence value.
 #######################################
 
+from __future__ import division
+
 from zpd import ZPD
-from functions import is_chinese
+from functions import is_chinese, is_simple_chinese
 
 class Assessor():
     'Abstract class of assessors.'
@@ -12,8 +16,37 @@ class Assessor():
     def assess(poem):
         return 0
 
+import urllib
+import urllib2
+import re
+import zlib
+
+DEBUG = 0
+
 class BaiduAssessor(Assessor):
     'Assessor using a search-based method.'
+    
+    target_url = "http://www.baidu.com/s?wd="
+    rec = re.compile("百度为您找到相关结果(.*?)个")
+    #rec = re.compile((u"百度为您找到相关结果(.*?)个").encode("gbk"))
+    req_header = {
+            'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.117 Safari/537.36',
+            'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Encoding':'gzip,deflate,sdch', 
+            'Accept-Language':'zh-CN,zh;q=0.8,ru;q=0.6,zh-TW;q=0.4,en;q=0.2',
+            'Connection':'keep-alive', 
+            'Host':'www.baidu.com',
+            'Cookie':'BAIDUID=B8500BBB79E8FDF6563EA2C212264EA8:FG=1; bdshare_firstime=1384009474193; NBID=C0F11DCE8CED3FABDA7D2D3ADD5729EB:FG=1; MCITY=-%3A; BDRCVFR[feWj1Vr5u3D]=I67x6TjHwwYf0; BDRCVFR[fBLL8ZbbiMm]=I67x6TjHwwYf0; H_PS_TIPFLAG=O; H_PS_TIPCOUNT=1; BD_CK_SAM=1; H_PS_PSSID=5066_1435_5223_5213_5378_5369_4264_4759_5402_5342'
+    }
+    if DEBUG:
+        httpHandler = urllib2.HTTPHandler(debuglevel=1)
+        httpsHandler = urllib2.HTTPSHandler(debuglevel=1)
+        opener = urllib2.build_opener(httpHandler, httpsHandler)
+        urllib2.install_opener(opener)
+
+    def input_cookies(self):
+        s = raw_input("Copy cookies here = ")
+        self.req_header["Cookie"] = s
 
     def to_query_style(self, u_str, minchar = 10, maxchar = 12):
         rst = u""
@@ -21,7 +54,7 @@ class BaiduAssessor(Assessor):
         for each in u_str:
             if cnt == maxchar:
                 break
-            elif is_chinese(each):
+            elif is_simple_chinese(each):
                 rst += each
                 cnt += 1
             elif cnt < minchar:
@@ -30,22 +63,114 @@ class BaiduAssessor(Assessor):
                 break
         return rst
 
+    def to_query_url(self, query_str, ac = False):
+        '''ac = True to search more accurately'''
+
+        if not ac:
+            return self.target_url + urllib.quote(query_str.encode('utf-8'))
+        else:
+            return self.target_url + '"' + urllib.quote(query_str.encode('utf-8')) + '"'
+
+    def get_rr_number(self, url):
+
+        try:
+            req = urllib2.Request(url, None, self.req_header)
+            response = urllib2.urlopen(req, timeout = 5)
+        
+            text = zlib.decompress(response.read(), 16 + zlib.MAX_WBITS)
+            
+        except:
+            return -1
+
+        if (response.geturl() != url):
+            print "WE'RE DETECTED, Cookie="
+            self.input_cookies()
+
+        rst = self.rec.findall(text)
+        if len(rst) == 0:
+            print "Wrong in relevant results number"
+            order = raw_input("Enter when fixed! (0 to skip, h to input header)")
+            if order == '0':
+                return 0
+            elif order == 'h':
+                self.input_cookies()
+            else:
+                return -1
+        else:
+            raw = rst[-1]
+            i = 0
+            while raw[i].isdigit() == False:
+                i += 1
+            
+            raw = raw[i:].replace(",", "")
+            return int(raw)
+
+    def render(self, scores):
+        if scores[0] == -1:
+            return -1
+        if scores[1] < 50 * scores[0]:
+            return scores[1]
+        else:
+            return int((scores[0] * scores[1]) ** 0.5)
+
     def assess(self, poem_dic):
+
         subject = poem_dic["subject"]
         poem = poem_dic["poem"]
-        query_str = self.to_query_style(subject, 2) + u' ' + self.to_query_style(poem, 5, 20)
-        print query_str
 
-def main():
+        query_str = self.to_query_style(subject, 2) + u' ' + self.to_query_style(poem, 7, 20)
+        print query_str
+        full_url = self.to_query_url(query_str)
+        a = self.get_rr_number(full_url)
+
+        query_str = self.to_query_style(poem, 10, 20)
+        full_url = self.to_query_url(query_str)
+        b = self.get_rr_number(full_url)
+
+        query_str = self.to_query_style(poem, 10, 20)
+        full_url = self.to_query_url(query_str, True)
+        c = self.get_rr_number(full_url)
+
+        return (a, b, c)
+
+def test():
     zpd = ZPD()
     bAssessor = BaiduAssessor()
     while True:
         poem_tup = zpd.pick(1)[0]
         poem_dic = zpd.tuple2dict(poem_tup)
-        bAssessor.assess(poem_dic)
-        if raw_input("stop? S") == 'S':
-            break
+        t = bAssessor.assess(poem_dic)
+        k = 0
+        while t == -1 and k < 3:
+            k += 1
+            t = bAssessor.assess(poem_dic)
+        print t
 
+def main():
+    zpd = ZPD()
+    bAssessor = BaiduAssessor()
+    
+    step = 500
+    n = zpd.count_all()
+
+    for i in range(n // step + 1):
+        print "============================================"
+        print "work on : " + str(i * 500 + 1) + " / " + str(n)
+        poems = zpd.select_by_id(i * 500, (i + 1) * 500)
+        updates = []
+        for each in poems:
+            poem_dic = zpd.tuple2dict(each)
+            t = bAssessor.assess(poem_dic)
+            k = 0
+            while t == -1 and k < 4:
+                k += 1
+                t = bAssessor.assess(poem_dic)
+            print t
+            updates.append((poem_dic["id"], t[0], t[1], t[2]))
+        f = open("scores/score" + str(i) + ".txt", "w")
+        for each in updates:
+            f.write("%d %d %d %d\n" % each)
+        f.close()
 
 if __name__ == "__main__":
     main()
