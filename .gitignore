@@ -3,6 +3,7 @@
 # copyright
 _poet*
 _poem*
+_poem_scores/*
 
 *.py[cod]
 
