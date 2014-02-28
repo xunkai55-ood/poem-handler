@@ -44,9 +44,19 @@ class BaiduAssessor(Assessor):
         opener = urllib2.build_opener(httpHandler, httpsHandler)
         urllib2.install_opener(opener)
 
+    def __init__(self):
+        self.input_cookies()
+
     def input_cookies(self):
-        s = raw_input("Copy cookies here = ")
-        self.req_header["Cookie"] = s
+        #s = raw_input("Copy cookies here = ")
+        #self.req_header["Cookie"] = s
+        if raw_input("Enter when cookie ready") == 'q':
+            return
+        else:
+            f = open("__cookies.txt", "r")
+            self.req_header["Cookie"] = f.read()
+            f.close()
+            return
 
     def to_query_style(self, u_str, minchar = 10, maxchar = 12):
         rst = u""
@@ -71,8 +81,10 @@ class BaiduAssessor(Assessor):
         else:
             return self.target_url + '"' + urllib.quote(query_str.encode('utf-8')) + '"'
 
-    def get_rr_number(self, url):
+    def get_rr_number(self, url, recv = 0, is_zero = False):
 
+        if (not is_zero and recv >= 3) or (is_zero and recv >= 2):
+            return -1
         try:
             req = urllib2.Request(url, None, self.req_header)
             response = urllib2.urlopen(req, timeout = 5)
@@ -80,7 +92,7 @@ class BaiduAssessor(Assessor):
             text = zlib.decompress(response.read(), 16 + zlib.MAX_WBITS)
             
         except:
-            return -1
+            return self.get_rr_number(url, recv + 1)
 
         if (response.geturl() != url):
             print "WE'RE DETECTED, Cookie="
@@ -88,14 +100,7 @@ class BaiduAssessor(Assessor):
 
         rst = self.rec.findall(text)
         if len(rst) == 0:
-            print "Wrong in relevant results number"
-            order = raw_input("Enter when fixed! (0 to skip, h to input header)")
-            if order == '0':
-                return 0
-            elif order == 'h':
-                self.input_cookies()
-            else:
-                return -1
+            return self.get_rr_number(url, recv + 1, True)
         else:
             raw = rst[-1]
             i = 0
@@ -152,8 +157,17 @@ def main():
     
     step = 500
     n = zpd.count_all()
+    start = input("give me your start point (0 ~ 860)")
+    end = input("and end point (1 ~ 861)")
+    
+    if (start >= end):
+        return
 
-    for i in range(n // step + 1):
+    for i in range(start, end):
+        if i != start:
+            if os.path.exists("socres/score" + str(i) + ".txt"):
+                print "cracked! exit"
+                return
         print "============================================"
         print "work on : " + str(i * 500 + 1) + " / " + str(n)
         poems = zpd.select_by_id(i * 500, (i + 1) * 500)
@@ -161,11 +175,7 @@ def main():
         for each in poems:
             poem_dic = zpd.tuple2dict(each)
             t = bAssessor.assess(poem_dic)
-            k = 0
-            while t == -1 and k < 4:
-                k += 1
-                t = bAssessor.assess(poem_dic)
-            print t
+            print poem_dic["id"], t
             updates.append((poem_dic["id"], t[0], t[1], t[2]))
         f = open("scores/score" + str(i) + ".txt", "w")
         for each in updates:

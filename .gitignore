@@ -4,6 +4,8 @@
 _poet*
 _poem*
 _poem_scores/*
+__cookies.txt
+scores/*
 
 *.py[cod]
 
