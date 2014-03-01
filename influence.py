@@ -16,10 +16,13 @@ class Assessor():
     def assess(poem):
         return 0
 
+IG_D = -40
+
 import urllib
 import urllib2
 import re
 import zlib
+import os
 
 DEBUG = 0
 
@@ -83,8 +86,10 @@ class BaiduAssessor(Assessor):
 
     def get_rr_number(self, url, recv = 0, is_zero = False):
 
-        if (not is_zero and recv >= 3) or (is_zero and recv >= 2):
+        if (not is_zero and recv >= 4):
             return -1
+        if (is_zero and recv >= 3):
+            return 0
         try:
             req = urllib2.Request(url, None, self.req_header)
             response = urllib2.urlopen(req, timeout = 5)
@@ -118,10 +123,13 @@ class BaiduAssessor(Assessor):
         else:
             return int((scores[0] * scores[1]) ** 0.5)
 
-    def assess(self, poem_dic):
+    def assess(self, poem_dic, ignore_dynasties = []):
 
         subject = poem_dic["subject"]
         poem = poem_dic["poem"]
+        
+        if poem_dic["dynasty"] in ignore_dynasties:
+            return (IG_D, IG_D, IG_D)
 
         query_str = self.to_query_style(subject, 2) + u' ' + self.to_query_style(poem, 7, 20)
         print query_str
@@ -163,6 +171,8 @@ def main():
     if (start >= end):
         return
 
+    ig_dynasties = [u'\u5143', u'\u660e']
+
     for i in range(start, end):
         if i != start:
             if os.path.exists("socres/score" + str(i) + ".txt"):
@@ -174,7 +184,12 @@ def main():
         updates = []
         for each in poems:
             poem_dic = zpd.tuple2dict(each)
-            t = bAssessor.assess(poem_dic)
+            t = bAssessor.assess(poem_dic, ig_dynasties)
+            while (t == (-1, -1, -1)):
+                op = raw_input("Network exception. S for skip, enter when fixed")
+                if op == 'S':
+                    break
+                t = bAssessor.assess(poem_dic, ig_dynasties)
             print poem_dic["id"], t
             updates.append((poem_dic["id"], t[0], t[1], t[2]))
         f = open("scores/score" + str(i) + ".txt", "w")
