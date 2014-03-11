@@ -5,6 +5,23 @@ Zxk Poem Database
 
 import sqlite3
 
+class BasicDB():
+
+    def __init__(self, path = "_poem.db"):
+        try:
+            self.conn = sqlite3.connect(path)
+        except:
+            self.conn = None
+
+    def query(self, query, values = None):
+
+        cur = self.conn.cursor()
+        if value == None:
+            rst = cur.execute(query).fetchall()
+        else:
+            rst = cur.execute(query, values).fetchall()
+        return rst
+
 class ZPD():
 
     def __init__(self, path = "_poems.db"):
@@ -29,7 +46,7 @@ class ZPD():
     def pick_by_id(self, x):
 
         query = "SELECT * FROM poems WHERE id = ?"
-        return self.query(query, (x,))
+        return self.query(query, (x,))[0]
 
     def query(self, query, values = None):
         'Use it for query only. Do not use it for updating.'
@@ -59,4 +76,33 @@ class ZPD():
     def list_dynasties(self):
         query = "SELECT DISTINCT(dynasty) FROM poems"
         return self.query(query)
+
+class InfluenceDB():
+
+    def __init__(self, path = "_influence.db"):
+        'connect'
+        
+        try:
+            self.conn = sqlite3.connect(path)
+        except:
+            self.conn = None
+
+    def query(self, query, values = None):
+        'Use it for query only. Do not use it for updating.'
+        
+        cur = self.conn.cursor()
+        if values == None:
+            rst = cur.execute(query).fetchall()
+        else:
+            rst = cur.execute(query, values).fetchall()
+        return rst
+
+    def count_all(self):
+        rst = self.query("SELECT count(*) FROM influence")
+        return rst[0][0]
+
+    def pick_descend(self, max_num = 100):
+
+        rst = self.query("SELECT id, c FROM influence ORDER BY c DESC LIMIT ?", (max_num,))
+        return rst
 

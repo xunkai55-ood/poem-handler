@@ -159,7 +159,7 @@ def test():
             t = bAssessor.assess(poem_dic)
         print t
 
-def main():
+def main_scan():
     zpd = ZPD()
     bAssessor = BaiduAssessor()
     
@@ -196,6 +196,9 @@ def main():
         for each in updates:
             f.write("%d %d %d %d\n" % each)
         f.close()
+
+def main():
+    main_scan()
 
 if __name__ == "__main__":
     main()

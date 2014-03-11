@@ -5,9 +5,6 @@ if __name__ == "__main__":
     while True:
         x = input("id?")
         rst = zpd.pick_by_id(x)
-        if len(rst) == 0:
-            print "invalid id"
-        else:
-            for each in rst[0]:
-                print each
+        for each in rst:
+            print each
     

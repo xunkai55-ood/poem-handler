@@ -1,11 +1,13 @@
 *~
 .*.swp
+
 # copyright
+*.db
 _poet*
 _poem*
 _poem_scores/*
-__cookies.txt
 scores/*
+__cookies.txt
 
 *.py[cod]
 
